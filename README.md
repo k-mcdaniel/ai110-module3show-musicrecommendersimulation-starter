@@ -11,23 +11,53 @@ Your goal is to:
 - Evaluate what your system gets right and wrong
 - Reflect on how this mirrors real world AI recommenders
 
-Replace this paragraph with your own summary of what your version does.
+This version builds a **content-based recommender** that scores each song against a user's taste profile using weighted attributes — genre, mood, energy, and acoustic preference. It ranks the full catalog by score and returns the top matches, with a plain-language explanation of why each song was chosen.
 
 ---
 
 ## How The System Works
 
-Explain your design in plain language.
+Real-world streaming platforms like Spotify and YouTube use two main approaches to predict what you'll love. **Collaborative filtering** looks across millions of users to find people with similar listening histories — "users like you also played this." **Content-based filtering** skips the crowd and instead matches song attributes directly to your stated preferences — tempo, genre, mood, energy level. Our simulator uses the content-based approach because it works without needing any other users' data and makes its reasoning transparent and easy to inspect.
 
-Some prompts to answer:
+### Features each `Song` uses
 
-- What features does each `Song` use in your system
-  - For example: genre, mood, energy, tempo
-- What information does your `UserProfile` store
-- How does your `Recommender` compute a score for each song
-- How do you choose which songs to recommend
+| Feature | Type | Role in scoring |
+|---|---|---|
+| `genre` | text | Primary taste signal — strongest weight |
+| `mood` | text | Captures the "vibe" independent of genre |
+| `energy` | 0.0–1.0 | Proximity match to the user's preferred energy |
+| `acousticness` | 0.0–1.0 | Signals whether a song is instrumental/chill or produced |
+| `valence` | 0.0–1.0 | Emotional brightness (happy vs. melancholy) — used for tiebreaking |
 
-You can include a simple diagram or bullet list if helpful.
+`tempo_bpm` and `danceability` are available in the dataset but are not primary scoring features, since they correlate strongly with energy and genre and would add redundant weight.
+
+### What `UserProfile` stores
+
+- `favorite_genre` — the genre the user most wants to hear (e.g., `"lofi"`)
+- `favorite_mood` — the mood they are seeking (e.g., `"chill"`)
+- `target_energy` — a 0–1 float representing how energetic they want the music (e.g., `0.4`)
+- `likes_acoustic` — a boolean for whether they prefer acoustic/organic sounds over produced ones
+
+### How `Recommender` computes a score
+
+Each song receives a total score built from weighted components:
+
+```
+score = genre_match × 3.0
+      + mood_match × 2.0
+      + (1 - |target_energy - song.energy|) × 2.0
+      + acoustic_bonus × 1.0
+```
+
+- `genre_match` and `mood_match` are 1 if the song matches the user's preference, 0 otherwise
+- The energy term rewards songs *close* to the user's preferred level — a perfect match scores 2.0, a total mismatch scores 0.0
+- `acoustic_bonus` is 1.0 if the user `likes_acoustic` and the song's `acousticness > 0.5`
+
+Max possible score: **8.0**
+
+### How songs are chosen
+
+After every song is scored, the full list is sorted highest-to-lowest and the top `k` results are returned (default `k = 5`). This is the **ranking rule** — separate from the scoring rule. The scoring rule answers "how relevant is this one song?"; the ranking rule answers "which songs win when we compare them all?"
 
 ---
 
