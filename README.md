@@ -59,6 +59,33 @@ Max possible score: **8.0**
 
 After every song is scored, the full list is sorted highest-to-lowest and the top `k` results are returned (default `k = 5`). This is the **ranking rule** — separate from the scoring rule. The scoring rule answers "how relevant is this one song?"; the ranking rule answers "which songs win when we compare them all?"
 
+### Data flow diagram
+
+```mermaid
+flowchart TD
+    A["User Profile\nfavorite_genre · favorite_mood\ntarget_energy · likes_acoustic"]
+    B["Load data/songs.csv\n(18 songs, typed values)"]
+    C["For each song in catalog"]
+    D["Score song\ngenre match × 3.0\nmood match × 2.0\nenergy proximity × 2.0\nacoustic bonus × 1.0"]
+    E["Collect (song, score, reasons)"]
+    F["Sort by score — highest first"]
+    G["Return top k recommendations\nwith plain-language explanations"]
+
+    A --> C
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+```
+
+### Potential biases to watch for
+
+- **Genre lock-in** — genre carries the highest weight (3.0), so a song with a perfect energy and mood match but a different genre will almost always lose to a genre-match with poor energy. A user who listed `"pop"` will never discover great blues or jazz tracks unless they change their profile.
+- **Filter bubble effect** — because all scoring is driven by what the user already declared, the system reinforces existing taste and never introduces serendipitous variety.
+- **Acoustic bias** — the acoustic bonus only applies when `likes_acoustic=True`; users who prefer produced/electronic sounds receive no equivalent bonus, so the system is slightly asymmetric.
+- **Catalog coverage** — with only 18 songs, certain moods (e.g., `"hype"`, `"euphoric"`) have just one representative track, meaning a matching user always gets the same top result regardless of other attributes.
+
 ---
 
 ## Getting Started
