@@ -125,25 +125,38 @@ You can add more tests in `tests/test_recommender.py`.
 
 ## Experiments You Tried
 
-Use this section to document the experiments you ran. For example:
+### Six test profiles
 
-- What happened when you changed the weight on genre from 2.0 to 0.5
-- What happened when you added tempo or valence to the score
-- How did your system behave for different types of users
+Six user profiles were run against the 18-song catalog:
+
+| Profile | Top result | Notes |
+|---|---|---|
+| High-Energy Pop Fan (pop/happy/0.8) | Sunrise City (score 6.96) | Near-perfect match — genre, mood, and energy all align |
+| Chill Lofi Student (lofi/chill/0.38, acoustic) | Library Rain (score 7.94) | Acoustic bonus pushed it just ahead of Midnight Coding |
+| Intense Rock Fan (rock/intense/0.92) | Storm Runner (score 6.98) | Only one rock song, but it fits perfectly |
+| Smooth R&B Listener (r&b/smooth/0.55) | Slow Burn (score 7.00) | Perfect match; #2–5 are generic energy-only picks |
+| Acoustic Folk Dreamer (folk/dreamy/0.30, acoustic) | Wildflower Road (score 8.00) | Maximum possible score — all four components matched |
+| Edge Case: Classical/Peaceful but energy=0.9 | Morning Sonata (score 6.64) | Bug-like behavior: genre+mood won even with a 0.68 energy gap |
+
+### Weight-shift experiment
+
+Genre weight halved (3.0 → 1.5), energy weight doubled (2.0 → 4.0):
+
+- **Pop/happy user:** Rooftop Lights jumped from #3 to #2 — mood match + energy proximity now outweighs being the wrong genre.
+- **Edge case user:** Morning Sonata's score dropped from 6.64 to 5.78. Storm Runner (energy 0.91, matching the target) rose to #2, confirming the system can detect better energy matches when genre is less dominant.
+- **Conclusion:** Higher energy weight makes recommendations more "vibe-sensitive" and less genre-locked. It also exposes the edge case problem more clearly — the system should probably not confidently recommend Morning Sonata to a user who wants high-energy music, regardless of genre match.
 
 ---
 
 ## Limitations and Risks
 
-Summarize some limitations of your recommender.
+- **Tiny catalog** — 18 songs means genres with only one entry always return the same top result. Variety is impossible at this scale.
+- **Genre lock-in** — The 3-point genre weight dominates scoring. A song in the wrong genre almost never beats a genre-match, even if everything else fits better.
+- **Binary matching** — Genre and mood are full match or nothing. "Indie pop" gets zero credit toward a "pop" user, and "relaxed" gets zero credit toward a "chill" user.
+- **Conflicting preferences break the system** — The edge case (classical/peaceful, energy=0.9) surfaces a real flaw: genre+mood match wins regardless of how badly the energy conflicts.
+- **No learning or history** — The system treats every session identically. It cannot remember what the user has already heard or improve over time.
 
-Examples:
-
-- It only works on a tiny catalog
-- It does not understand lyrics or language
-- It might over favor one genre or mood
-
-You will go deeper on this in your model card.
+See `model_card.md` for a deeper analysis of each limitation.
 
 ---
 
@@ -153,10 +166,9 @@ Read and complete `model_card.md`:
 
 [**Model Card**](model_card.md)
 
-Write 1 to 2 paragraphs here about what you learned:
+Building this recommender showed me how straightforward it actually is to turn user preferences into ranked predictions, you just assign weights to features, score every song, and sort. What stood out was how predictable and transparent the results were: once you know the weights, you can mentally trace exactly why a song ranked where it did. That transparency is something real apps like Spotify don't give you, even though their underlying logic is doing something similar at a much larger scale.
 
-- about how recommenders turn data into predictions
-- about where bias or unfairness could show up in systems like this
+The biggest bias risk I noticed is that the system creates a genre filter bubble by design. Because genre carries the most weight, a user who picks "pop" will only ever see pop songs near the top, no matter how well other songs might match their energy or mood. If this were a real product, users would never discover music outside their stated preference, the system would just keep reinforcing what they already said they liked. That's exactly how real recommenders can quietly limit what people get exposed to over time, even when the algorithm is technically doing its job correctly.
 
 
 ---
@@ -263,6 +275,7 @@ Examples:
 A few sentences about what you learned:
 
 - What surprised you about how your system behaved
+
 - How did building this change how you think about real music recommenders
 - Where do you think human judgment still matters, even if the model seems "smart"
 
